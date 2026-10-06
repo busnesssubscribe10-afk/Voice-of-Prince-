@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary and render output directory
+temp/*
+!temp/.gitkeep
+
+# Sensitive Google OAuth credentials (Protected from GitHub Push Scanning)
+client_secrets.json
+token.json
+
+# Environment & OS files
+.DS_Store
+Thumbs.db
+*.log
+push_to_github.bat
