@@ -15,6 +15,10 @@ CLIENT_SECRETS_FILE = os.path.join(BASE_DIR, "client_secrets.json")
 TOKEN_PICKLE_FILE = os.path.join(BASE_DIR, "token.json")
 YOUTUBE_UPLOAD_SCOPE = ["https://www.googleapis.com/auth/youtube.upload"]
 
+# Facebook API Credentials
+FACEBOOK_PAGE_ID = "YOUR_PAGE_ID_HERE"
+FACEBOOK_ACCESS_TOKEN = "YOUR_PAGE_ACCESS_TOKEN_HERE"
+
 # Video Settings
 CANVAS_WIDTH = 1080
 CANVAS_HEIGHT = 1920

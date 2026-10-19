@@ -26,6 +26,7 @@ from config import (
 from downloader import is_youtube_url, download_youtube_media, download_trending_audio, probe_media
 from video_engine import build_reaction_video
 from youtube_uploader import upload_video_to_youtube
+from facebook_uploader import upload_video_to_facebook, check_facebook_config
 from admin_manager import is_admin, get_admins, add_admin, remove_admin, MASTER_ADMIN_ID
 
 # Configure logging
@@ -45,9 +46,10 @@ logger = logging.getLogger(__name__)
     TRENDING_AUDIO_INPUT,
     TRENDING_AUDIO_VOL,
     VIDEO_META,
+    UPLOAD_DEST,
     UPLOAD_CHOICE,
     SCHEDULE_TIME
-) = range(10)
+) = range(11)
 
 DEFAULT_TITLE = f"Amazing Reaction Video 🔥 #Shorts #{CHANNEL_NAME.replace(' ', '')}"
 DEFAULT_DESCRIPTION = f"Welcome to {CHANNEL_NAME}! Enjoy this reaction short.\n\n#Shorts #VoiceOfPrince #Viral #Trending #Reactions"
@@ -479,10 +481,71 @@ async def handle_video_meta(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"━━━━━━━━━━━━━━━━━━\n"
     )
     await msg.reply_text(summary_text, parse_mode="Markdown")
-    return await ask_upload_option(msg, context)
+    return await ask_upload_dest(msg, context)
 
 # Internal transition helper: No @check_auth decorator
-async def ask_upload_option(message, context: ContextTypes.DEFAULT_TYPE):
+async def ask_upload_dest(message, context: ContextTypes.DEFAULT_TYPE):
+    """Presents upload destination: YouTube only, Facebook only, or Both."""
+    fb_available = check_facebook_config()
+
+    if fb_available:
+        keyboard = [
+            [InlineKeyboardButton("📺 Only YouTube", callback_data="dest_youtube")],
+            [InlineKeyboardButton("📘 Only Facebook", callback_data="dest_facebook")],
+            [InlineKeyboardButton("🔥 Both (YouTube + Facebook)", callback_data="dest_both")]
+        ]
+    else:
+        keyboard = [
+            [InlineKeyboardButton("📺 YouTube এ আপলোড", callback_data="dest_youtube")],
+            [InlineKeyboardButton("📘 Facebook (সেটআপ হয়নি ❌)", callback_data="dest_fb_not_setup")]
+        ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    fb_status = "✅ সেটআপ সম্পন্ন" if fb_available else "❌ সেটআপ হয়নি (FacebookGuide.txt দেখুন)"
+
+    await message.reply_text(
+        f"🌐 **স্টেপ ৭: আপলোড গন্তব্য নির্বাচন করুন (Upload Destination)**\n\n"
+        f"📺 YouTube: ✅ প্রস্তুত\n"
+        f"📘 Facebook: {fb_status}\n\n"
+        f"ভিডিওটি কোথায় আপলোড করতে চান?",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
+    return UPLOAD_DEST
+
+@check_auth
+async def handle_upload_dest(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles upload destination selection."""
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+
+    if data == "dest_fb_not_setup":
+        await query.message.reply_text(
+            "❌ **Facebook সেটআপ হয়নি!**\n\n"
+            "Facebook এ আপলোড করতে হলে আগে সেটআপ করতে হবে।\n"
+            "📄 **FacebookGuide.txt** ফাইলটি পড়ে ধাপে ধাপে সেটআপ করুন।\n\n"
+            "আপাতত YouTube এ আপলোড করুন:",
+            parse_mode="Markdown"
+        )
+        context.user_data['upload_dest'] = "youtube"
+        return await ask_upload_timing(query.message, context)
+
+    dest_map = {
+        "dest_youtube": "youtube",
+        "dest_facebook": "facebook",
+        "dest_both": "both"
+    }
+    context.user_data['upload_dest'] = dest_map.get(data, "youtube")
+
+    dest_labels = {"youtube": "📺 YouTube", "facebook": "📘 Facebook", "both": "🔥 YouTube + Facebook"}
+    dest_label = dest_labels.get(context.user_data['upload_dest'], "📺 YouTube")
+    await query.message.reply_text(f"✅ আপলোড গন্তব্য: **{dest_label}** সিলেক্ট করা হয়েছে।", parse_mode="Markdown")
+
+    return await ask_upload_timing(query.message, context)
+
+# Internal transition helper: No @check_auth decorator
+async def ask_upload_timing(message, context: ContextTypes.DEFAULT_TYPE):
     """Presents upload mode options: Now vs Schedule vs Preview."""
     keyboard = [
         [InlineKeyboardButton("⚡ Now (এখনই আপলোড)", callback_data="upload_now")],
@@ -492,8 +555,8 @@ async def ask_upload_option(message, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await message.reply_text(
-        f"🚀 **স্টেপ ৭: ইউটিউব আপলোড অপশন:**\n\n"
-        f"ভিডিওটি কখন আপনার **'{CHANNEL_NAME}'** চ্যানেলে প্রকাশ করতে চান?",
+        f"🚀 **স্টেপ ৮: আপলোড টাইমিং অপশন:**\n\n"
+        f"ভিডিওটি কখন আপলোড করতে চান?",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
@@ -604,6 +667,7 @@ async def start_generation_pipeline(message, context: ContextTypes.DEFAULT_TYPE)
     bottom_text = context.user_data.get('bottom_text', DEFAULT_BOTTOM_TEXT)
     audio_choice = context.user_data.get('audio_choice', 'mute_bottom')
     upload_mode = context.user_data.get('upload_mode', 'preview')
+    upload_dest = context.user_data.get('upload_dest', 'youtube')
     schedule_iso = context.user_data.get('schedule_time_iso')
     video_title = context.user_data.get('video_title', DEFAULT_TITLE)
     video_description = context.user_data.get('video_description', DEFAULT_DESCRIPTION)
@@ -623,26 +687,54 @@ async def start_generation_pipeline(message, context: ContextTypes.DEFAULT_TYPE)
             trending_volume=trending_vol
         )
 
-        # Step 2: Handle YouTube Upload / Schedule
+        # Step 2: Handle Upload based on Destination
         yt_info = None
+        fb_info = None
+
         if upload_mode in ["now", "schedule"]:
-            await status_msg.edit_text(
-                f"📤 **YouTube চ্যানেলে আপলোড হচ্ছে ('{CHANNEL_NAME}')...**\n" +
-                (f"⏰ শিডিউল সময়: {context.user_data.get('display_sched_time')}" if schedule_iso else "⚡ পাবলিক মোড")
-            )
-            try:
-                yt_info = upload_video_to_youtube(
-                    video_path=final_video_path,
-                    title=video_title,
-                    description=video_description,
-                    schedule_time_iso=schedule_iso
+            # --- YouTube Upload ---
+            if upload_dest in ["youtube", "both"]:
+                await status_msg.edit_text(
+                    f"📤 **YouTube চ্যানেলে আপলোড হচ্ছে ('{CHANNEL_NAME}')...**\n" +
+                    (f"⏰ শিডিউল সময়: {context.user_data.get('display_sched_time')}" if schedule_iso else "⚡ পাবলিক মোড")
                 )
-            except Exception as yt_err:
-                logger.error(f"YouTube Upload Failed: {yt_err}")
-                await status_msg.reply_text(
-                    f"⚠️ ইউটিউবে স্বয়ংক্রিয় আপলোড হয়নি:\n`{str(yt_err)}`\n\n"
-                    f"নোট: ইউটিউব এপিআই অথেন্টিকেশনের জন্য auth_youtube.bat চালান। আপনার তৈরি হওয়া ভিডিও নিচে দেওয়া হলো!"
-                )
+                try:
+                    yt_info = upload_video_to_youtube(
+                        video_path=final_video_path,
+                        title=video_title,
+                        description=video_description,
+                        schedule_time_iso=schedule_iso
+                    )
+                except Exception as yt_err:
+                    logger.error(f"YouTube Upload Failed: {yt_err}")
+                    await status_msg.reply_text(
+                        f"⚠️ ইউটিউবে আপলোড হয়নি:\n`{str(yt_err)}`\n\n"
+                        f"নোট: ইউটিউব এপিআই অথেন্টিকেশনের জন্য auth_youtube.bat চালান।"
+                    )
+
+            # --- Facebook Upload ---
+            if upload_dest in ["facebook", "both"]:
+                await status_msg.edit_text("📤 **Facebook পেজে Reel আপলোড হচ্ছে...**")
+                try:
+                    fb_schedule_unix = None
+                    if schedule_iso:
+                        import datetime as dt_module
+                        sched_dt = dt_module.datetime.strptime(schedule_iso, "%Y-%m-%dT%H:%M:%SZ")
+                        sched_dt = sched_dt.replace(tzinfo=pytz.utc)
+                        fb_schedule_unix = int(sched_dt.timestamp())
+
+                    fb_info = upload_video_to_facebook(
+                        video_path=final_video_path,
+                        title=video_title,
+                        description=video_description,
+                        schedule_time_unix=fb_schedule_unix
+                    )
+                except Exception as fb_err:
+                    logger.error(f"Facebook Upload Failed: {fb_err}")
+                    await status_msg.reply_text(
+                        f"⚠️ Facebook এ আপলোড হয়নি:\n`{str(fb_err)}`\n\n"
+                        f"📄 FacebookGuide.txt দেখুন।"
+                    )
 
         # Step 3: Send video preview to user via Telegram
         await status_msg.edit_text("📤 তৈরি হওয়া ভিডিওটি টেলিগ্রামে পাঠানো হচ্ছে...")
@@ -667,6 +759,13 @@ async def start_generation_pipeline(message, context: ContextTypes.DEFAULT_TYPE)
                 caption += f"\n⏰ <b>YouTube Scheduled:</b> {safe_sched_time}\n🔗 <b>লিংক:</b> {yt_url}"
             else:
                 caption += f"\n✅ <b>YouTube Live:</b>\n🔗 <b>লিংক:</b> {yt_url}"
+
+        if fb_info:
+            fb_url = fb_info.get("url", "")
+            if fb_info.get("scheduled"):
+                caption += f"\n⏰ <b>Facebook Scheduled:</b> {safe_sched_time}\n🔗 <b>লিংক:</b> {fb_url}"
+            else:
+                caption += f"\n✅ <b>Facebook Published:</b>\n🔗 <b>লিংক:</b> {fb_url}"
 
         caption += "\n\nনতুন ভিডিও তৈরি করতে /start বা /create লিখুন।"
 
@@ -771,6 +870,9 @@ def main():
             VIDEO_META: [
                 CallbackQueryHandler(handle_video_meta, pattern="^skip_video_meta$"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_video_meta)
+            ],
+            UPLOAD_DEST: [
+                CallbackQueryHandler(handle_upload_dest, pattern="^dest_")
             ],
             UPLOAD_CHOICE: [
                 CallbackQueryHandler(handle_upload_choice, pattern="^(upload_now|upload_schedule|preview_only)$")

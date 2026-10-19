@@ -1,0 +1,234 @@
+========================================================================
+     ফেসবুক পেজে ভিডিও আপলোড সেটআপ গাইড (Facebook Page Video Upload)
+                       Voice of Prince Bot
+========================================================================
+
+📋 সূচিপত্র:
+  ১. Facebook Developer Account তৈরি
+  ২. Facebook App তৈরি
+  ৩. প্রয়োজনীয় Permissions সেটআপ
+  ৪. Page Access Token তৈরি
+  ৫. Long-Lived Token তৈরি
+  ৬. config.py তে সেটআপ
+  ৭. টেস্ট করা
+  ৮. সমস্যা সমাধান (Troubleshooting)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔷 স্টেপ ১: Facebook Developer Account তৈরি করুন
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ১. ব্রাউজারে যান: https://developers.facebook.com/
+  ২. আপনার Facebook অ্যাকাউন্ট দিয়ে লগইন করুন
+  ৩. "Get Started" বাটনে ক্লিক করুন
+  ৪. Developer Agreement accept করুন
+  ৫. আপনার ফোন নম্বর ভেরিফাই করুন (যদি চায়)
+  ৬. আপনি এখন Facebook Developer!
+
+  ⚠️ গুরুত্বপূর্ণ: যেই Facebook অ্যাকাউন্ট দিয়ে লগইন করবেন,
+     সেই অ্যাকাউন্ট থেকে আপনার Facebook Page-এ Admin access থাকতে হবে।
+
+
+🔷 স্টেপ ২: Facebook App তৈরি করুন
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ১. https://developers.facebook.com/apps/ এ যান
+  ২. "Create App" বাটনে ক্লিক করুন
+  ৩. Use Case সিলেক্ট করুন:
+     → "Other" সিলেক্ট করুন → "Next" চাপুন
+  ৪. App Type সিলেক্ট করুন:
+     → "Business" সিলেক্ট করুন → "Next" চাপুন
+  ৫. App Details পূরণ করুন:
+     - App Name: "Voice of Prince Bot" (বা যেকোনো নাম)
+     - App Contact Email: আপনার ইমেইল
+     - Business Account: (optional, skip if not needed)
+  ৬. "Create App" বাটনে ক্লিক করুন
+  ৭. পাসওয়ার্ড দিয়ে কনফার্ম করুন
+
+  ✅ App তৈরি হয়ে গেলে আপনাকে App Dashboard-এ নিয়ে যাবে।
+
+  📝 নোট করুন:
+     - App ID: Dashboard-এ উপরে দেখতে পাবেন (যেমন: 1234567890)
+     - App Secret: Settings > Basic > App Secret (Show বাটনে ক্লিক করুন)
+
+
+🔷 স্টেপ ৩: প্রয়োজনীয় Permissions সেটআপ করুন
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  আপনার App-এ নিচের permissions/products যোগ করতে হবে:
+
+  ১. App Dashboard-এ বাম পাশে "Add Product" এ ক্লিক করুন
+  ২. "Facebook Login for Business" খুঁজুন → "Set Up" ক্লিক করুন
+  ৩. বাম মেনুতে "Permissions and Features" এ যান
+  ৪. নিচের permissions গুলো Request করুন:
+
+     ✅ pages_manage_posts       → পেজে পোস্ট করার জন্য
+     ✅ pages_read_engagement    → পেজের engagement পড়ার জন্য
+     ✅ pages_show_list          → পেজ লিস্ট দেখার জন্য
+     ✅ pages_read_user_content  → ইউজার কন্টেন্ট পড়ার জন্য
+     ✅ publish_video            → ভিডিও পাবলিশ করার জন্য (Reels)
+
+  ⚠️ কিছু permissions-এর জন্য "App Review" প্রয়োজন হতে পারে।
+     কিন্তু আপনার নিজের পেজে (যেখানে আপনি Admin) আপলোড করতে
+     App Review ছাড়াই কাজ করবে "Development Mode" এ।
+
+
+🔷 স্টেপ ৪: Page Access Token তৈরি করুন
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  📌 পদ্ধতি ১: Graph API Explorer ব্যবহার করে (সবচেয়ে সহজ)
+  ─────────────────────────────────────────────────────────────
+
+  ১. যান: https://developers.facebook.com/tools/explorer/
+  ২. উপরে ডানে "Facebook App" ড্রপডাউন থেকে আপনার App সিলেক্ট করুন
+  ৩. "User or Page" ড্রপডাউনে → "Get Page Access Token" ক্লিক করুন
+  ৪. আপনার Facebook পেজ সিলেক্ট করুন
+  ৫. নিচের permissions চেক করুন:
+     ☑ pages_manage_posts
+     ☑ pages_read_engagement
+     ☑ pages_show_list
+     ☑ publish_video
+  ৬. "Generate Access Token" বাটনে ক্লিক করুন
+  ৭. Permission allow করুন
+  ৮. টোকেন কপি করুন!
+
+  ⚠️ এই টোকেন অল্প সময়ের জন্য valid (প্রায় ১ ঘণ্টা)।
+     Long-Lived Token তৈরি করতে স্টেপ ৫ দেখুন।
+
+
+🔷 স্টেপ ৫: Long-Lived Page Access Token তৈরি করুন (গুরুত্বপূর্ণ!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Short-lived token মাত্র ১ ঘণ্টা কাজ করে। আপনাকে Long-Lived Token
+  বানাতে হবে যেটা প্রায় ৬০ দিন বা "never expires" পর্যন্ত কাজ করবে।
+
+  📌 ধাপ A: Short-Lived User Token কে Long-Lived User Token এ রূপান্তর
+  ────────────────────────────────────────────────────────────────────────
+
+  ব্রাউজারে নিচের URL ওপেন করুন (আপনার তথ্য বসিয়ে):
+
+  https://graph.facebook.com/v19.0/oauth/access_token?
+    grant_type=fb_exchange_token&
+    client_id=আপনার_APP_ID&
+    client_secret=আপনার_APP_SECRET&
+    fb_exchange_token=আপনার_SHORT_LIVED_TOKEN
+
+  এটা আপনাকে একটি Long-Lived User Access Token দেবে।
+
+  📌 ধাপ B: Long-Lived User Token থেকে Page Access Token বের করুন
+  ────────────────────────────────────────────────────────────────────
+
+  ব্রাউজারে নিচের URL ওপেন করুন:
+
+  https://graph.facebook.com/v19.0/me/accounts?access_token=আপনার_LONG_LIVED_USER_TOKEN
+
+  এটা আপনার সব পেজের তালিকা দেখাবে। প্রতিটি পেজের জন্য:
+  - "id": এটাই আপনার FACEBOOK_PAGE_ID
+  - "access_token": এটাই আপনার FACEBOOK_ACCESS_TOKEN (Long-Lived Page Token)
+  - "name": পেজের নাম
+
+  ✅ Long-Lived Page Access Token কখনো expire হয় না!
+     (যতক্ষণ আপনি পেজের Admin থাকবেন)
+
+  📝 উদাহরণ Response:
+  {
+    "data": [
+      {
+        "access_token": "EAAG...(অনেক লম্বা টোকেন)...",
+        "id": "123456789012345",
+        "name": "Voice of Prince"
+      }
+    ]
+  }
+
+
+🔷 স্টেপ ৬: config.py তে সেটআপ করুন
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  config.py ফাইলটি ওপেন করুন এবং নিচের দুটি লাইন খুঁজুন:
+
+    FACEBOOK_PAGE_ID = "YOUR_PAGE_ID_HERE"
+    FACEBOOK_ACCESS_TOKEN = "YOUR_PAGE_ACCESS_TOKEN_HERE"
+
+  এগুলোতে আপনার আসল তথ্য বসান:
+
+    FACEBOOK_PAGE_ID = "123456789012345"         ← স্টেপ ৫ থেকে পাওয়া id
+    FACEBOOK_ACCESS_TOKEN = "EAAG...আপনার_টোকেন"  ← স্টেপ ৫ থেকে পাওয়া access_token
+
+  ⚠️ কোটেশন মার্ক (") এর মধ্যে রাখুন!
+  ⚠️ কোনো স্পেস বা লাইন ব্রেক রাখবেন না!
+
+
+🔷 স্টেপ ৭: টেস্ট করুন
+━━━━━━━━━━━━━━━━━━━━━━━
+
+  কমান্ড প্রম্পট/PowerShell ওপেন করুন এবং প্রজেক্ট ফোল্ডারে যান:
+
+    cd "E:\Automationnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn\Islamic Video"
+    python facebook_uploader.py
+
+  যদি সব ঠিক থাকে, দেখাবে:
+    ✅ Facebook Page ID: 123456789012345
+    ✅ Access Token: EAAG...
+    Facebook কনফিগারেশন সঠিকভাবে সেটআপ করা হয়েছে!
+
+  যদি সমস্যা থাকে, দেখাবে:
+    ❌ Facebook কনফিগারেশন সেটআপ করা হয়নি!
+
+
+🔷 স্টেপ ৮: সমস্যা সমাধান (Troubleshooting)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ❓ সমস্যা: "(#200) Requires pages_manage_posts permission"
+  ✅ সমাধান: Graph API Explorer-এ pages_manage_posts permission
+     চেক করে আবার টোকেন জেনারেট করুন।
+
+  ❓ সমস্যা: "Invalid OAuth access token"
+  ✅ সমাধান: আপনার টোকেন expire হয়ে গেছে। স্টেপ ৪ ও ৫ আবার
+     ফলো করে নতুন Long-Lived Token তৈরি করুন।
+
+  ❓ সমস্যা: "(#100) The video file you selected is in a format that we don't support"
+  ✅ সমাধান: ভিডিও MP4 ফরম্যাটে এবং H.264 কোডেকে হতে হবে।
+     এই বট ডিফল্টভাবে সঠিক ফরম্যাটেই ভিডিও তৈরি করে।
+
+  ❓ সমস্যা: "(#368) The action attempted has been deemed abusive or is otherwise disallowed"
+  ✅ সমাধান: আপনার App Development Mode-এ আছে। শুধুমাত্র
+     App-এর Admin/Developer/Tester রোলে থাকা ইউজাররা ব্যবহার করতে পারবে।
+     Settings > Basic > App Roles-এ আপনার অ্যাকাউন্ট যোগ করুন।
+
+  ❓ সমস্যা: "OAuthException: Error validating access token"
+  ✅ সমাধান:
+     - নিশ্চিত করুন আপনি সঠিক Page Access Token ব্যবহার করছেন
+       (User Token নয়!)
+     - স্টেপ ৫ আবার ফলো করুন
+
+  ❓ সমস্যা: Page ID কোথায় পাবো?
+  ✅ সমাধান:
+     - আপনার Facebook Page-এ যান
+     - About/Info সেকশনে Page ID পাবেন
+     - অথবা স্টেপ ৫ এর ধাপ B এর API response থেকে "id" ফিল্ড কপি করুন
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 সারসংক্ষেপ (Quick Reference):
+
+  ১. https://developers.facebook.com/ → Developer হন
+  ২. App তৈরি করুন (Type: Business)
+  ৩. Graph API Explorer → Page Token Generate করুন
+  ৪. Long-Lived Token তৈরি করুন
+  ৫. config.py তে FACEBOOK_PAGE_ID + FACEBOOK_ACCESS_TOKEN বসান
+  ৬. python facebook_uploader.py দিয়ে টেস্ট করুন
+  ৭. বট থেকে ভিডিও বানান → "📘 Only Facebook" বা "🔥 Both" সিলেক্ট করুন!
+
+  🔒 নিরাপত্তা তথ্য:
+  - FACEBOOK_ACCESS_TOKEN কখনো পাবলিকলি শেয়ার করবেন না!
+  - .gitignore ফাইলে config.py-তে থাকা secrets GitHub-এ push হবে না
+    (তবে config.py নিজেই push হয়, তাই প্রোডাকশনে environment variable ব্যবহার করুন)
+  - Long-Lived Page Token কখনো expire হয় না, তবে পাসওয়ার্ড পরিবর্তন
+    করলে বা App রিমুভ করলে invalid হয়ে যাবে
+
+========================================================================
+                         গাইড সমাপ্ত! 🎉
+              কোনো সমস্যা হলে GitHub Issues-এ জানান।
+========================================================================
